@@ -1,3 +1,6 @@
+
+rm(list = ls())
+
 library(tidyverse)
 library(knitr)
 library(tinytex)
@@ -17,6 +20,7 @@ source(str_glue("unicef-products/{type}/country-specific-talking-points/utils/us
 wuenic_dta <- read_rds(str_glue("unicef-products/{type}/01_wuenic_dataset-prep/clean_wuenic_MASTER_{rev_yr}rev.rds")) %>%
   #filter(lvl_2 %in% c("region_unicef_ops", "region_au", "region_au_africa")) %>% 
   filter(lvl_2 %in% c("region_unicef_ops")) %>% 
+  filter(lvl_1 == "country") %>% 
   filter(year >= 2000) %>%
   mutate(country = case_when(iso3c == "bol" ~ "Bolivia",
                              # iso3c == "caf" ~ "CAR",
@@ -41,6 +45,7 @@ wuenic_dta <- read_rds(str_glue("unicef-products/{type}/01_wuenic_dataset-prep/c
 hpv_dta <- read_excel(str_glue('unicef-products/{type}/region-specific-talking-points/utils/hpv_estimates_wuenic{hpv_rev_yr}rev.xlsx')) %>%
   #filter(lvl_2 %in% c("region_unicef_ops", "region_au", "region_au_africa")) %>% 
   filter(lvl_2 %in% c("region_unicef_ops")) %>% 
+  filter(lvl_1 == "country") %>% 
   filter(!is.na(coverage)) %>% 
   # programme coverage
   filter(vaccine_code %in% c("PRHPV1_F", "PRHPVC_F")) %>%
@@ -61,24 +66,30 @@ wiise_hpv_intro_yrs <- read_excel(str_glue("unicef-products/{type}/utils/wiise-h
 # base map
 base_map_df <- readRDS(str_glue('unicef-products/{type}/utils/unicef-base-map.rds')) %>% 
   sf::st_as_sf() %>% 
-  mutate_at(vars(iso3c), str_to_lower)
+  mutate_at(vars(iso3c), str_to_lower) %>% 
+  mutate(iso3c = case_when(
+    admin == "France" ~ "fra",
+    admin == "Norway" ~ "nor",
+    TRUE ~ iso3c
+  )) %>% 
+  filter(!is.na(admin))
 
 # unique countries ----
 countries <- unique(wuenic_dta$country)
-
-# filter to num 1 to 195
-countries <- countries[1:195]
+iso3cs <- unique(wuenic_dta$iso3c)
 
 ## render pdfs ----
 # loop through regions and generate reports
 for (country in countries) {
 
+  message("Generating report for: ", country)
   output_file <- str_glue("reports/Talking-points_{country}.pdf")
   
   rmarkdown::render(str_glue("unicef-products/{type}/country-specific-talking-points/country_report_template.Rmd"),
                     output_file = output_file,
                     params = list(country = country),
-                    envir = new.env())  # ensure a clean environment
+                    envir = new.env(), # ensure a clean environment
+                    quiet = TRUE)
   
   message("Report generated: ", output_file)
 }

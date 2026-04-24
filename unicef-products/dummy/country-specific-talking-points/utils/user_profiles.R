@@ -45,6 +45,7 @@ library(lubridate)
 library(flextable)
 library(kableExtra)
 library(webshot2)
+library(ggspatial)
 
 # if (USERNAME == "laure"){
 #   wd <- "C:/Users/laure/OneDrive - UNICEF"
