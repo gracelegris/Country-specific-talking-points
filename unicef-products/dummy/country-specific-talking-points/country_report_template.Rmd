@@ -41,7 +41,8 @@ header-includes:
 options(scipen = 999)
 
 # filter to selected country and its region peers
-df <- wuenic_dta %>% filter(country == params$country)
+df <- wuenic_dta %>% filter(country == params$country) %>% 
+  filter(!vaccine == "pol3") # we are no longer producing estimates for POL3
 hpv_df <- hpv_dta %>% filter(country == params$country)
 has_hpv_data <- nrow(hpv_df) > 0
 has_hpvc <- has_hpv_data && any(hpv_df$vaccine_code == "PRHPVC_F")
@@ -341,7 +342,7 @@ ia2030_rev_yr_lbl <- label_vals_millions_num(ia2030_rev_yr)
 \newpage
 
 \begin{tcolorbox}[colback=unicefblue, colframe=unicefblue, arc=0mm, sharp corners]
-\textcolor{white}{\Large \textbf{Overview}}
+\textcolor{white}{\large \textbf{Overview}}
 \end{tcolorbox}
 
 ```{r, echo=FALSE, results='asis'}
@@ -387,7 +388,7 @@ heatmap_ovw_df <- df %>%
     coverage %in% 90:94 ~ "90-94", coverage >= 95 ~ ">=95", TRUE ~ NA_character_))
 
 heatmap_ovw_df$vaccine <- factor(heatmap_ovw_df$vaccine,
-  levels = c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3", "PCVC", "RotaC", "POL3", "IPV1", "IPVC", "MCV1", "RCV1", "MCV2", "YFV", "MengA", "HPVc"))
+  levels = c("BCG", "HepBB", "DTP1", "DTP3", "Hib3", "HepB3", "PCVC", "RotaC", "IPV1", "IPVC", "MCV1", "RCV1", "MCV2", "YFV", "MengA", "HPVc"))
 
 heatmap_overview <-
   heatmap_ovw_df %>%
@@ -422,10 +423,10 @@ all_vax_plot <- heatmap_ovw_df %>%
 vaccine_colors <- c(
   "BCG"    = "#1CABE2", "HepBB"  = "#0058AB", "DTP1"   = "#00833D",
   "DTP3"   = "#80BD41", "Hib3"   = "#6A1E74", "HepB3"  = "#961A49",
-  "PCVC"   = "#E2231A", "RotaC"  = "#F26A21", "POL3"   = "#FFC20E",
-  "IPV1"   = "#B50800", "IPVC"   = "#FF8C00", "MCV1"   = "#2E7EBB",
-  "RCV1"   = "#9E9E9E", "MCV2"   = "#FFB6C1", "YFV"    = "#5B4A9C",
-  "MengA"  = "#C8A900", "HPVc"   = "#D45F9E"
+  "PCVC"   = "#E2231A", "RotaC"  = "#F26A21", "IPV1"   = "#B50800", 
+  "IPVC"   = "#FF8C00", "MCV1"   = "#2E7EBB", "RCV1"   = "#9E9E9E", 
+  "MCV2"   = "#FFB6C1", "YFV"    = "#5B4A9C", "MengA"  = "#C8A900", 
+  "HPVc"   = "#D45F9E"
 )
 
 # first data point per vaccine for labels
@@ -445,15 +446,8 @@ all_vax_plot <- ggplot(all_vax_plot, aes(x = year, y = coverage, color = vaccine
   geom_text(data = first_points, aes(label = vaccine, color = vaccine, face = "bold"),
             hjust = 1.2, size = 2.5, show.legend = FALSE) +
   scale_color_manual(values = vaccine_colors) +
-  scale_x_continuous(
-    breaks = seq(2000, rev_yr, 1),
-    expand = expansion(add = c(2, 0.5)) # adds 2 years of space on left, 0.5 on right
-  ) +
-  scale_y_continuous(
-    limits = c(min_coverage - 5, 100),
-    breaks = seq(0, 100, by = 10),
-    name = "Coverage (%)"
-  ) +
+  scale_x_continuous(breaks = seq(2000, rev_yr, 1), expand = expansion(add = c(2, 0.5))) +
+  scale_y_continuous(limits = c(min_coverage - 5, 100), breaks = seq(0, 100, by = 10), name = "Coverage (%)") +
   labs(
     title = str_glue("Vaccine coverage over time, {ctry_name}, 2000–{rev_yr}"),
     caption = paste0("Dotted line shows the IA2030 target of 90% coverage\n", wuenic_src),
@@ -552,22 +546,24 @@ scale_factor <- max(plot_dtp1$coverage, na.rm = TRUE) / max(plot_zd_dtp$unvaccin
 
 # plot
 dtp_plot <- ggplot() +
+  geom_col(data = plot_zd_dtp, aes(x = year, y = unvaccinated * scale_factor, fill = "Zero-dose children"),
+           alpha = 0.4, width = 0.6) +
   geom_line(data = plot_dtp1, aes(x = year, y = coverage, color = "DTP1 coverage"), size = 0.8) +
   geom_point(data = plot_dtp1, aes(x = year, y = coverage, color = "DTP1 coverage"), size = 1.5) +
-  geom_line(data = plot_zd_dtp, aes(x = year, y = unvaccinated * scale_factor, color = "Zero-dose children"), size = 0.8) +
-  geom_point(data = plot_zd_dtp, aes(x = year, y = unvaccinated * scale_factor, color = "Zero-dose children"), size = 1.5) +
   geom_hline(yintercept = 90, linetype = "dashed") +
-  scale_color_manual(values = c("DTP1 coverage" = "#1CABE2", "Zero-dose children" = "#E2231A")) +
+  scale_color_manual(name = NULL, values = c("DTP1 coverage" = "#1CABE2")) +
+  scale_fill_manual(name = NULL, values = c("Zero-dose children" = "#E2231A")) +
   scale_x_continuous(breaks = seq(min(plot_dtp1$year), max(plot_dtp1$year), 1)) +
-  scale_y_continuous(limits = c(0, 100), name = "Coverage (%)", sec.axis = sec_axis(~ . / scale_factor, 
-                                                                                    name = "Zero-dose children", 
-                                                                                    labels = scales::label_comma())) +
+  scale_y_continuous(limits = c(0, 100), name = "Coverage (%)",
+                     sec.axis = sec_axis(~ . / scale_factor,
+                                         name = "Zero-dose children",
+                                         labels = scales::label_comma())) +
   labs(
     title = str_glue("DTP1 coverage and zero-dose children over time, {ctry_name}, 2000–{rev_yr}"),
     caption = paste0("Dotted line shows the IA2030 target of 90% coverage\n", wuenic_src),
-    x = "Year",
-    color = NULL
+    x = "Year"
   ) +
+  guides(color = guide_legend(order = 1), fill = guide_legend(order = 2)) +
   theme_unicef() +
   theme(
     panel.grid.minor = element_blank(),
@@ -581,7 +577,7 @@ dtp_plot <- ggplot() +
 \newpage
 
 \begin{tcolorbox}[colback=unicefblue, colframe=unicefblue, arc=0mm, sharp corners]
-\textcolor{white}{\Large \textbf{DTP1: Reaching zero-dose children}}
+\textcolor{white}{\large \textbf{DTP1: Reaching zero-dose children}}
 \end{tcolorbox}
 
 ```{r, echo=FALSE, results='asis'}
@@ -654,7 +650,7 @@ reg_rank_dtp3 <- reg_peers %>%
   mutate(rank = row_number()) %>%
   filter(iso3c == ctry_iso)
 
-# un- and undervaccinated (unvaccinated for dtp3)
+# un- and under-vaccinated (unvaccinated for dtp3)
 unvac_dtp3_rev  <- unvac_v %>% pull(7)
 unvac_dtp3_lbl  <- label_vals_millions_num(unvac_dtp3_rev)
 
@@ -685,23 +681,31 @@ pop_chng_txt <- if (ctry_cvg_rev_dtp3 < ctry_cvg_comp_dtp3 & tgt[[7]] > tgt[[5]]
 # prep dtp3 coverage over time
 plot_dtp3 <- df %>% filter(vaccine == "dtp3") %>% select(year, coverage)
 
+# get number unvaccinated for secondary y-axis
+plot_zd_dtp3 <- df %>%
+  filter(vaccine %in% c("dtp3")) %>% 
+   select(year, unvaccinated)
+
 # scaling factor for secondary axis
-scale_factor <- max(plot_dtp3$coverage, na.rm = TRUE) / max(plot_zd_dtp$unvaccinated, na.rm = TRUE)
+scale_factor <- max(plot_dtp3$coverage, na.rm = TRUE) / max(plot_zd_dtp3$unvaccinated, na.rm = TRUE)
 
 # plot
 dtp3_plot <- ggplot() +
+  geom_col(data = plot_zd_dtp, aes(x = year, y = unvaccinated * scale_factor, fill = "Un- or Under-Vaccinated Children"),
+           alpha = 0.4, width = 0.6) +
   geom_line(data = plot_dtp3, aes(x = year, y = coverage, color = "DTP3 coverage"), size = 0.8) +
   geom_point(data = plot_dtp3, aes(x = year, y = coverage, color = "DTP3 coverage"), size = 1.5) +
-  geom_line(data = plot_zd_dtp, aes(x = year, y = unvaccinated * scale_factor, color = "Zero-dose children"), size = 0.8) +
-  geom_point(data = plot_zd_dtp, aes(x = year, y = unvaccinated * scale_factor, color = "Zero-dose children"), size = 1.5) +
   geom_hline(yintercept = 90, linetype = "dashed") +
-  scale_color_manual(values = c("DTP3 coverage" = "#1CABE2", "Zero-dose children" = "#E2231A")) +
+  scale_color_manual(name = NULL, values = c("DTP3 coverage" = "#1CABE2")) +
+  scale_fill_manual(name = NULL, values = c("Un- or Under-Vaccinated Children" = "#E2231A")) +
+  geom_hline(yintercept = 90, linetype = "dashed") +
+  scale_color_manual(values = c("DTP3 coverage" = "#1CABE2", "Un- or Under-Vaccinated Children" = "#E2231A")) +
   scale_x_continuous(breaks = seq(min(plot_dtp3$year), max(plot_dtp3$year), 1)) +
   scale_y_continuous(limits = c(0, 100), name = "Coverage (%)", sec.axis = sec_axis(~ . / scale_factor, 
-                                                                                    name = "Zero-dose children", 
+                                                                                    name = "Un- or Under-Vaccinated Children", 
                                                                                     labels = scales::label_comma())) +
   labs(
-    title = str_glue("DTP3 coverage and zero-dose children over time, {ctry_name}, 2000–{rev_yr}"),
+    title = str_glue("DTP3 coverage and un- or under-vaccinated children over time, {ctry_name}, 2000–{rev_yr}"),
     caption = paste0("Dotted line shows the IA2030 target of 90% coverage\n", wuenic_src),
     x = "Year",
     color = NULL
@@ -719,7 +723,7 @@ dtp3_plot <- ggplot() +
 \newpage
 
 \begin{tcolorbox}[colback=unicefblue, colframe=unicefblue, arc=0mm, sharp corners]
-\textcolor{white}{\Large \textbf{DTP3: A marker of routine immunization service delivery to children}}
+\textcolor{white}{\large \textbf{DTP3: A marker of routine immunization service delivery to children}}
 \end{tcolorbox}
 
 ```{r, echo=FALSE, results='asis'}
@@ -732,7 +736,7 @@ cat("\\addcontentsline{toc}{section}{DTP3: A marker of routine immunization serv
 
 - In `r rev_yr`, `r dropout_dtp %>% filter(year == rev_yr) %>% pull(dropout)`% of children who received DTP1 did not receive DTP3. This `r dropout_dtp %>% filter(year == rev_yr) %>% pull(dropout)`% dropout was `r dropout_comp_dtp %>% pull(diff_txt)`. `r dropout_dtp %>% filter(year == rev_yr) %>% pull(dropout_txt)`.
 
-- In `r rev_yr`, DTP3 coverage in `r the_ctry_name` was `r ctry_cvg_rev_dtp3`%, leaving `r unvac_dtp3_lbl` children un- or undervaccinated.
+- In `r rev_yr`, DTP3 coverage in `r the_ctry_name` was `r ctry_cvg_rev_dtp3`%, leaving `r unvac_dtp3_lbl` children un- or under-vaccinated.
 
 - Among `r ctry_regn` region peers, `r the_ctry_name` ranked `r reg_rank_dtp3$rank` out of `r n_peers` countries in DTP3 coverage in `r rev_yr`.
 
@@ -881,13 +885,15 @@ if ("mcv2" %in% available_vaccines) {
 }
 
 # prep zero-dose (mcv1-based)
-plot_zd <- df %>% filter(vaccine == "mcv1") %>% select(year, unvaccinated)
+plot_zd_mcv <- df %>% filter(vaccine == "mcv1") %>% select(year, unvaccinated)
 
 # scaling factor for secondary axis
-scale_factor <- max(plot_mcv1$coverage, na.rm = TRUE) / max(plot_zd$unvaccinated, na.rm = TRUE)
-
+scale_factor <- max(plot_mcv1$coverage, na.rm = TRUE) / max(plot_zd_mcv$unvaccinated, na.rm = TRUE)
+  
 # plot
 mcv_plot <- ggplot() +
+  geom_col(data = plot_zd_mcv, aes(x = year, y = unvaccinated * scale_factor, fill = "MCV zero-dose children"),
+           alpha = 0.4, width = 0.6) +
   # mcv1
   geom_line(data = plot_mcv1, aes(x = year, y = coverage, color = "MCV1 coverage"), size = 0.8) +
   geom_point(data = plot_mcv1, aes(x = year, y = coverage, color = "MCV1 coverage"), size = 1.5) +
@@ -897,17 +903,16 @@ mcv_plot <- ggplot() +
       geom_line(data = plot_mcv2, aes(x = year, y = coverage, color = "MCV2 coverage"), size = 0.8),
       geom_point(data = plot_mcv2, aes(x = year, y = coverage, color = "MCV2 coverage"), size = 1.5)
     )} +
-  # zero-dose
-  geom_line(data = plot_zd, aes(x = year, y = unvaccinated * scale_factor, color = "Zero-dose children"), size = 0.8) +
-  geom_point(data = plot_zd, aes(x = year, y = unvaccinated * scale_factor, color = "Zero-dose children"), size = 1.5) +
   geom_hline(yintercept = 90, linetype = "dashed") +
-  scale_color_manual(values = c("MCV1 coverage" = "#1CABE2", "MCV2 coverage" = "#6A1E74", "Zero-dose children" = "#E2231A")) +
+  scale_color_manual(name = NULL, values = c("MCV1 coverage" = "#1CABE2", "MCV2 coverage" = "#6A1E74")) +
+  scale_fill_manual(name = NULL, values = c("MCV zero-dose children" = "#E2231A")) +
   scale_x_continuous(breaks = seq(min(plot_mcv1$year), max(plot_mcv1$year), 1)) +
   scale_y_continuous(limits = c(0, 100), name = "Coverage (%)",
-    sec.axis = sec_axis(~ . / scale_factor, name = "Zero-dose children", labels = scales::label_comma())) +
-  labs(title = str_glue("MCV coverage and zero-dose children over time, {ctry_name}, 2000–{rev_yr}"),
+    sec.axis = sec_axis(~ . / scale_factor, name = "MCV zero-dose children", labels = scales::label_comma())) +
+  guides(color = guide_legend(order = 1), fill = guide_legend(order = 2)) +
+  labs(title = str_glue("MCV coverage and MCV zero-dose children over time, {ctry_name}, 2000–{rev_yr}"),
     caption = paste0("Dotted line shows the IA2030 target of 90% coverage\n", wuenic_src),
-    x = "Year", color = NULL) +
+    x = "Year") +
   theme_unicef() +
   theme(panel.grid.minor = element_blank(), panel.grid.major.x = element_line(),
     axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
@@ -918,7 +923,7 @@ mcv_plot <- ggplot() +
 \newpage
 
 \begin{tcolorbox}[colback=unicefblue, colframe=unicefblue, arc=0mm, sharp corners]
-\textcolor{white}{\Large \textbf{MCV: Canary in the coal mine}}
+\textcolor{white}{\large \textbf{MCV: Canary in the coal mine}}
 \end{tcolorbox}
 
 ```{r, echo=FALSE, results='asis'}
@@ -1094,20 +1099,23 @@ if (has_hpv_data) {
     )} +
     # unvaccinated females (if available)
     {if (has_hpv_num_unvac && nrow(plot_zd_hpv) > 1) list(
-       geom_line(data = plot_zd_hpv, aes(x = year, y = unvaccinated * hpv_scale_factor, color = "Unvaccinated females"), size = 0.8),
-       geom_point(data = plot_zd_hpv, aes(x = year, y = unvaccinated * hpv_scale_factor, color = "Unvaccinated females"), size = 1.5)
+       geom_col(data = plot_zd_hpv, aes(x = year, y = unvaccinated * hpv_scale_factor, fill = "Unvaccinated females"),
+           alpha = 0.4, width = 0.6)
     ) else if (has_hpv_num_unvac && nrow(plot_zd_hpv) == 1) list(
         geom_point(data = plot_zd_hpv, aes(x = year, y = unvaccinated * hpv_scale_factor, color = "Unvaccinated females"), size = 1.5)
     )} +
     geom_hline(yintercept = 90, linetype = "dashed") +
-    scale_color_manual(values = c("HPV1 coverage" = "#1CABE2", "HPVc coverage" = "#6A1E72", "Unvaccinated females" = "#E2231A")) +
+    scale_color_manual(values = c("HPV1 coverage" = "#1CABE2", "HPVc coverage" = "#6A1E72")) +
+    scale_fill_manual(name = NULL, values = c("Unvaccinated females" = "#E2231A")) +
     scale_x_continuous(breaks = seq(min(plot_hpv_ref$year), max(plot_hpv_ref$year), 1)) +
     {if (has_hpv_num_unvac)
-      scale_y_continuous(limits = c(0, 100), name = "Coverage (%)",
-        sec.axis = sec_axis(~ . / hpv_scale_factor, name = "Unvaccinated females",
-          labels = scales::label_comma()))
+  scale_y_continuous(limits = c(0, 100), name = "Coverage (%)",
+    sec.axis = sec_axis(~ . / hpv_scale_factor, name = "Unvaccinated females",
+      labels = scales::label_comma()))
     else
       scale_y_continuous(limits = c(0, 100), name = "Coverage (%)")} +
+    {if (has_hpv_num_unvac)
+      guides(color = guide_legend(order = 1), fill = guide_legend(order = 2))} +
     labs(
       title = str_glue(
         "{if (has_hpvc) 'HPV1 and HPVc coverage' else 'HPV1 coverage'}{if (has_hpv_num_unvac) ' and unvaccinated females' else ''} over time, {ctry_name}, {first_hpv_year}–{hpv_rev_yr}"),
@@ -1127,7 +1135,7 @@ if (has_hpv_data) {
 \newpage
 
 \begin{tcolorbox}[colback=unicefblue, colframe=unicefblue, arc=0mm, sharp corners]
-\textcolor{white}{\Large \textbf{HPV}}
+\textcolor{white}{\large \textbf{HPV}}
 \end{tcolorbox}
 
 ```{r, echo=FALSE, results='asis'}
@@ -1139,8 +1147,11 @@ cat("\\addcontentsline{toc}{section}{HPV}")
 \vspace{1em}
 
 ```{r hpv-intro-flag, results='asis', echo=FALSE}
-if (hpv_intro_flag == 0 | has_hpv_data == FALSE) {
+if (hpv_intro_flag == 0) {
   cat(paste0("- ", ctry_name, " had not introduced HPV vaccination as of ", rev_yr, ".\n"))
+  cat("\\vspace{0.6em}\n")
+} else if (hpv_intro_flag == 1 & has_hpv_data == FALSE) {
+  cat(paste0("- ", ctry_name, " had introduced HPV vaccination as of ", rev_yr, " but has no ", rev_yr, " WUENIC HPV data.\n"))
   cat("\\vspace{0.6em}\n")
 } else {
   if (has_hpvc) {
@@ -1250,7 +1261,7 @@ dynamic_height <- max(4, min(dynamic_height, 12))
 \newpage
 
 \begin{tcolorbox}[colback=unicefblue, colframe=unicefblue, arc=0mm, sharp corners]
-\textcolor{white}{\Large \textbf{Regional Comparison}}
+\textcolor{white}{\large \textbf{Regional Comparison}}
 \end{tcolorbox}
 
 ```{r, echo=FALSE, results='asis'}
@@ -1343,7 +1354,7 @@ plt_add_vax <-
 \newpage
 
 \begin{tcolorbox}[colback=unicefblue, colframe=unicefblue, arc=0mm, sharp corners]
-\textcolor{white}{\Large \textbf{Additional Vaccines}}
+\textcolor{white}{\large \textbf{Additional Vaccines}}
 \end{tcolorbox}
 
 ```{r, echo=FALSE, results='asis'}
@@ -1371,7 +1382,7 @@ print(plt_add_vax)
 \newpage
 
 \begin{tcolorbox}[colback=unicefblue, colframe=unicefblue, arc=0mm, sharp corners]
-\textcolor{white}{\Large \textbf{Appendix}}
+\textcolor{white}{\large \textbf{Appendix}}
 \end{tcolorbox}
 
 ```{r, echo=FALSE, results='asis'}
