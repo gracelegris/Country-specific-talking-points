@@ -453,9 +453,9 @@ for (v in c('dtp1', 'dtp3', 'mcv1')) {
   gg <- plt_df %>%
     ggplot(aes(x = year, y = reorder(country, -rev_yr_cvg), fill = coverage)) +
     geom_tile(color = "white") +
-    geom_text(data = plt_df %>% filter(coverage > 80 | coverage < 90), aes(label = paste0(as.character(coverage))), 
+    geom_text(data = plt_df %>% filter(coverage > 80 | coverage < 95), aes(label = paste0(as.character(coverage))), 
               colour = 'black', vjust = 0.5, size = 3) +
-    geom_text(data = plt_df %>% filter(coverage <= 80 | coverage >= 90), aes(label = paste0(as.character(coverage))), 
+    geom_text(data = plt_df %>% filter(coverage <= 80 | coverage >= 95), aes(label = paste0(as.character(coverage))), 
               colour = 'white', vjust = 0.5, size = 3) +
     geom_rect(aes(xmin = 2000 - 0.5, xmax = rev_yr + 0.5, ymin = unique(cvg_position) - 0.5, ymax = unique(cvg_position) + 0.5),
               fill = "transparent", color = "black", size = 1) +
@@ -494,32 +494,44 @@ for (v in c('dtp1', 'dtp3', 'mcv1')) {
 # LINE PLOT FOR EACH VACCINE
 for (v in c('dtp1', 'dtp3', 'mcv1')) {
   local({
-    v <- v  # force capture of current loop value
-    
-    plt_vax_df <- df %>% 
-      filter(country == regn, vaccine == v) %>%
-      select(year, coverage, unvaccinated)
-    
-    vax_label <- paste0(toupper(v), " coverage")
-    
-    max_cvg <- max(plt_vax_df$coverage, na.rm = TRUE)
-    max_zd  <- max(plt_vax_df$unvaccinated, na.rm = TRUE)
-    scale_factor <- ifelse(max_zd > 0, max_cvg / max_zd, 1)
-    
+      v <- v  # force capture of current loop value
+      
+      plt_vax_df <- df %>% 
+        filter(country == regn, vaccine == v) %>%
+        select(year, coverage, unvaccinated)
+      
+      vax_label <- paste0(toupper(v), " coverage")
+      
+      if (v == "dtp1") {
+        count_label <- "Zero-dose children"
+      } else if (v == "dtp3") {
+        count_label <- "Un- and under-vaccinated children"
+      } else if (v == "mcv1") {
+        count_label <- "MCV zero-dose children"
+      }
+      
+      max_cvg <- max(plt_vax_df$coverage, na.rm = TRUE)
+      max_zd  <- max(plt_vax_df$unvaccinated, na.rm = TRUE)
+      scale_factor <- ifelse(max_zd > 0, max_cvg / max_zd, 1)
+      
+      vax_values <- setNames("#1CABE2", vax_label)
+    fill_values <- setNames("#E2231A", count_label)
+  
     gg_line <- ggplot(plt_vax_df) +
-      geom_col(aes(x = year, y = unvaccinated * scale_factor, fill = "Zero-dose children"),
+      geom_col(aes(x = year, y = unvaccinated * scale_factor, fill = count_label),
                alpha = 0.4, width = 0.6) +
       geom_line(aes(x = year, y = coverage, color = vax_label), size = 0.8) +
       geom_point(aes(x = year, y = coverage, color = vax_label), size = 1.5) +
       geom_hline(yintercept = 90, linetype = "dashed", alpha = 0.7) +
-      scale_color_manual(name = NULL, values = setNames("#1CABE2", vax_label)) +
-      scale_fill_manual(name = NULL, values = c("Zero-dose children" = "#E2231A")) +
+      scale_color_manual(name = NULL, values = vax_values, breaks = vax_label) + 
+      scale_fill_manual(name = NULL, values = fill_values, breaks = count_label) +
+      guides(color = guide_legend(order = 1), fill = guide_legend(order = 2)) +
       scale_x_continuous(breaks = seq(2000, rev_yr, by = 2)) +
       scale_y_continuous(limits = c(0, 100), name = "Coverage (%)",
-                         sec.axis = sec_axis(~ . / scale_factor, name = "Zero-dose children (Count)",
+                         sec.axis = sec_axis(~ . / scale_factor, name = count_label,
                                              labels = scales::label_comma())) +
       labs(
-        title = str_glue("{toupper(v)} coverage and zero-dose children, {regn}, 2000–{rev_yr}"),
+        title = str_glue("{toupper(v)} coverage and {tolower(count_label)}, {regn}, 2000–{rev_yr}"),
         caption = str_glue("Dotted line shows the IA2030 target of 90% coverage\n{wuenic_src}"),
         x = "Year"
       ) +
@@ -531,7 +543,7 @@ for (v in c('dtp1', 'dtp3', 'mcv1')) {
         plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
         legend.position = "bottom"
       )
-    
+      
     plot_name <- paste0("line_plt_", v)
     assign(plot_name, gg_line, envir = .GlobalEnv)  # must specify envir when inside local()
   })
@@ -606,9 +618,9 @@ heatmap_reg <- heatmap_reg_df %>%
   ggplot(aes(x = year, y = vaccine, fill = coverage)) +
   geom_tile(color = "white") +
   theme_minimal() +
-  geom_text(data = heatmap_reg_df %>% filter(coverage > 80 | coverage < 90), aes(label = paste0(as.character(coverage))), 
+  geom_text(data = heatmap_reg_df %>% filter(coverage > 80 | coverage < 95), aes(label = paste0(as.character(coverage))), 
               colour = 'black', vjust = 0.5, size = txt_size) +
-    geom_text(data = heatmap_reg_df %>% filter(coverage <= 80 | coverage >= 90), aes(label = paste0(as.character(coverage))), 
+    geom_text(data = heatmap_reg_df %>% filter(coverage <= 80 | coverage >= 95), aes(label = paste0(as.character(coverage))), 
               colour = 'white', vjust = 0.5, size = txt_size) +
   labs(x = '', y = '',
        title = str_glue("Vaccine coverage (%), by year, {regn}, {min(heatmap_reg_df$year)}-{rev_yr}"),
@@ -1346,7 +1358,8 @@ if (hpv_missing_flag == 1) {
 <!-- ===================== BIG CATCH-UP ===================== -->
 
 ```{r setup-bcu-ctry, include=FALSE}
-bcu_ctry <- c("afg","ben","bfa","bdi","cmr","caf","tcd","tgo","com","civ","cod","eth","gmb","gin","gnb","ken","kgz","mdg","mli","mrt","moz","mmr","npl","ner","nga","pak","slb","som","ssd","sdn","syr","tjk","tza","yem","zmb")
+bcu_ctry <- c("afg","ben","bfa","bdi","cmr","caf","tcd","tgo","com","civ","cod","eth","gmb","gin","gnb","ken","kgz",
+              "mdg","mli","mrt","moz","mmr","npl","ner","nga","pak","slb","som","ssd","sdn","syr","tjk","tza","yem","zmb")
 
 n_bcu_ctry <- df %>%
   select(iso3c) %>%
@@ -1355,77 +1368,96 @@ n_bcu_ctry <- df %>%
   pull(count)
 
 if (n_bcu_ctry > 0) {
-recovery <- df %>%
-  filter(lvl_1 == 'country',
-         iso3c %in% c(bcu_ctry),
-         vaccine == 'dtp3',
-         year %in% c(2019:rev_yr)) %>%
-  select(iso3c:vaccine, year, coverage) %>%
-  arrange(iso3c, vaccine, year) %>%
-  pivot_wider(., names_from = year, values_from = coverage) %>%
-  mutate(diff_2019_2020 = `2020`-`2019`,
-         diff_2019_2021 = `2021`-`2019`,
-         diff_2019_2022 = `2022`-`2019`,
-         diff_2019_2023 = `2023`-`2019`,
-         diff_2019_2024 = `2024`-`2019`) %>%
-  rowwise() %>%
-  mutate(pandemic_impact = min(diff_2019_2020, diff_2019_2021, diff_2019_2022, diff_2019_2023, diff_2019_2024)) %>%
-  mutate(pandemic_effect = case_when(pandemic_impact <= -5 ~ 'substantial decline',
-                                     pandemic_impact < 0 ~ 'small decline',
-                                     pandemic_impact >=0 ~ 'no decline')) %>%
-  mutate(recovery_status = case_when(diff_2019_2024 >= 0 ~ 'recovered',
-                                     diff_2019_2024 >= pandemic_impact+3 ~ 'recovering',
-                                     TRUE ~ 'not recovered'))
+  # 1. Improved Data Processing
+  recovery <- df %>%
+    filter(lvl_1 == 'country',
+           iso3c %in% c(bcu_ctry),
+           vaccine == 'dtp3',
+           year %in% c(2019:rev_yr)) %>%
+    select(iso3c, country, vaccine, year, coverage) %>%
+    arrange(iso3c, vaccine, year) %>%
+    pivot_wider(names_from = year, values_from = coverage) %>%
+    # Use rowwise with pmin to handle potential NAs in specific years
+    rowwise() %>% 
+    mutate(
+      # Calculate differences relative to 2019 baseline
+      diff_2019_2020 = `2020` - `2019`,
+      diff_2019_2021 = `2021` - `2019`,
+      diff_2019_2022 = `2022` - `2019`,
+      diff_2019_2023 = `2023` - `2019`,
+      diff_2019_2024 = `2024` - `2019`,
+      # pandemic_impact is the deepest drop relative to 2019
+      pandemic_impact = pmin(diff_2019_2020, diff_2019_2021, diff_2019_2022, 
+                             diff_2019_2023, diff_2019_2024, na.rm = TRUE),
+      # Categorize the severity of the decline
+      pandemic_effect = case_when(
+        pandemic_impact <= -5 ~ 'substantial decline',
+        pandemic_impact < 0   ~ 'small decline',
+        TRUE                  ~ 'no decline'
+      ),
+      # Categorize recovery status
+      recovery_status = case_when(
+        diff_2019_2024 >= 0 ~ 'recovered',
+        # Recovering defined as regaining >3% points from the low
+        diff_2019_2024 >= (pandemic_impact + 3) ~ 'recovering',
+        TRUE ~ 'not recovered'
+      )
+    ) %>%
+    ungroup()
 
-recovery_summary <- recovery %>%
-  mutate(pandemic_effect = case_when(
-    grepl("small|substantial", pandemic_effect) ~ "decline",
-    TRUE ~ "no decline"
-  )) %>%
-  group_by(pandemic_effect, recovery_status) %>%
-  summarise(n_countries = n(), .groups = "drop") %>%
-  complete(pandemic_effect = c("decline", "no decline"), 
-           recovery_status = c("recovered", "recovering", "not recovered"), 
-           fill = list(n_countries = 0)) 
+  # 2. Refined Summary Logic
+  recovery_summary <- recovery %>%
+    mutate(declined_ever = ifelse(grepl("decline", pandemic_effect), "decline", "no decline")) %>%
+    group_by(declined_ever, recovery_status) %>%
+    summarise(n_countries = n(), .groups = "drop") %>%
+    complete(declined_ever = c("decline", "no decline"), 
+             recovery_status = c("recovered", "recovering", "not recovered"), 
+             fill = list(n_countries = 0)) 
 
-n_no_decline <- recovery_summary %>% filter(recovery_status == "recovered", grepl("no decline", pandemic_effect)) %>% pull(n_countries)
-n_recovered  <- recovery_summary %>% filter(recovery_status == "recovered", !grepl("no decline", pandemic_effect)) %>% pull(n_countries)
-n_recovering <- recovery_summary %>% filter(recovery_status == "recovering", !grepl("no decline", pandemic_effect)) %>% pull(n_countries)
-n_no         <- recovery_summary %>% filter(recovery_status == "not recovered", !grepl("no decline", pandemic_effect)) %>% pull(n_countries)
+  # Extract counts for text generation
+  n_no_decline <- recovery_summary %>% 
+    filter(recovery_status == "recovered", declined_ever == "no decline") %>% 
+    summarise(total = sum(n_countries)) %>% pull(total)
 
-if (n_recovered == 1) {
-  recovery_txt1 <- str_glue("One country ({recovery %>% filter(recovery_status == 'recovered', !grepl('no decline', pandemic_effect)) %>% pull(country) %>% knitr::combine_words()}) has fully recovered to or exceeded their 2019 DTP3 levels.")
-} else if (n_recovered > 1) {
-  recovery_txt1 <- str_glue("{n_recovered} countries ({recovery %>% filter(recovery_status == 'recovered', !grepl('no decline', pandemic_effect)) %>% pull(country) %>% knitr::combine_words()}) have fully recovered to or exceeded their 2019 DTP3 levels.")
-} else {
-  recovery_txt1 <- ""
-}
+  n_recovered <- recovery_summary %>% 
+    filter(recovery_status == "recovered", declined_ever == "decline") %>% 
+    summarise(total = sum(n_countries)) %>% pull(total)
 
-if (n_recovering == 1) {
-  recovery_txt2 <- str_glue("One country ({recovery %>% filter(recovery_status == 'recovering') %>% pull(country) %>% knitr::combine_words()}) is on the path to recovery to 2019 DTP3 levels.")
-} else if (n_recovering > 1) {
-  recovery_txt2 <- str_glue("{n_recovering} countries ({recovery %>% filter(recovery_status == 'recovering') %>% pull(country) %>% knitr::combine_words()}) are on the path to recovery to 2019 DTP3 levels.")
-} else {
-  recovery_txt2 <- ""
-}
+  n_recovering <- recovery_summary %>% 
+    filter(recovery_status == "recovering") %>% 
+    summarise(total = sum(n_countries)) %>% pull(total)
 
-if (n_no == 1) {
-  recovery_txt3 <- str_glue("One country ({recovery %>% filter(recovery_status == 'not recovered') %>% pull(country) %>% knitr::combine_words()}) has not yet recovered, with stagnation or decline from 2019 DTP3 levels.")
-} else if (n_no > 1) {
-  recovery_txt3 <- str_glue("{n_no} countries ({recovery %>% filter(recovery_status == 'not recovered') %>% pull(country) %>% knitr::combine_words()}) have not yet recovered, with stagnation or decline from 2019 DTP3 levels.")
-} else {
-  recovery_txt3 <- ""
-}
+  n_no <- recovery_summary %>% 
+    filter(recovery_status == "not recovered") %>% 
+    summarise(total = sum(n_countries)) %>% pull(total)
 
-if (n_no_decline == 1) {
-  recovery_txt4 <- str_glue("The remaining country ({recovery %>% filter(recovery_status == 'recovered', grepl('no decline', pandemic_effect)) %>% pull(country) %>% knitr::combine_words()}) did not experience a decline in DTP3 levels compared to 2019.")
-} else if (n_no_decline > 1) {
-  recovery_txt4 <- str_glue("The remaining {n_no_decline} countries ({recovery %>% filter(recovery_status == 'recovered', grepl('no decline', pandemic_effect)) %>% pull(country) %>% knitr::combine_words()}) did not experience a decline in DTP3 coverage levels compared to 2019.")
-} else {
-  recovery_txt4 <- ""
-}
+  # 3. Helper function for clean text blocks
+  build_text <- function(count, status_label, countries_vec, desc) {
+    if (count == 0) return(NULL)
+    count_txt <- if (count == 1) "One country" else paste(count, "countries")
+    names_txt <- knitr::combine_words(countries_vec)
+    str_glue("{count_txt} ({names_txt}) {desc}")
+  }
 
-recovery_txt_final <- str_glue("{recovery_txt1}\n\n{recovery_txt2}\n\n{recovery_txt3}\n\n{recovery_txt4}")
+  # Generate individual components
+  recovery_txt1 <- build_text(n_recovered, "recovered", 
+                     recovery %>% filter(recovery_status == 'recovered', grepl('decline', pandemic_effect)) %>% pull(country),
+                     "fully recovered to or exceeded their 2019 DTP3 levels.")
+  
+  recovery_txt2 <- build_text(n_recovering, "recovering", 
+                     recovery %>% filter(recovery_status == 'recovering') %>% pull(country),
+                     "are on the path to recovery to 2019 DTP3 levels.")
+  
+  recovery_txt3 <- build_text(n_no, "not recovered", 
+                     recovery %>% filter(recovery_status == 'not recovered') %>% pull(country),
+                     "have not yet recovered, with stagnation or decline from 2019 DTP3 levels.")
+  
+  recovery_txt4 <- build_text(n_no_decline, "no decline", 
+                     recovery %>% filter(recovery_status == 'recovered', pandemic_effect == 'no decline') %>% pull(country),
+                     "did not experience a decline in DTP3 levels compared to 2019.")
+
+  # 4. Final output: Combines only non-empty strings with double newlines
+  recovery_txt_final <- paste(Filter(negate(is.null), list(recovery_txt1, recovery_txt2, recovery_txt3, recovery_txt4)), collapse = "\n\n")
 }
 ```
 
@@ -1449,30 +1481,30 @@ if (n_bcu_ctry > 0) {
 ```
 
 ```{r, results='asis', echo=FALSE}
-if (exists("recovery_txt1") && n_bcu_ctry > 0 && recovery_txt1 != "") {
+if (n_bcu_ctry > 0 && !is.null(recovery_txt1) && nzchar(recovery_txt1)) {
   cat(paste0("    -   ", recovery_txt1, "\n"))
 }
 ```
 
 ```{r, results='asis', echo=FALSE}
-if (exists("recovery_txt2") && n_bcu_ctry > 0 && recovery_txt2 != "") {
+if (n_bcu_ctry > 0 && !is.null(recovery_txt2) && nzchar(recovery_txt2)) {
   cat(paste0("    -   ", recovery_txt2, "\n"))
 }
 ```
 
 ```{r, results='asis', echo=FALSE}
-if (exists("recovery_txt3") && n_bcu_ctry > 0 && recovery_txt3 != "") {
+if (n_bcu_ctry > 0 && !is.null(recovery_txt3) && nzchar(recovery_txt3)) {
   cat(paste0("    -   ", recovery_txt3, "\n"))
 }
 ```
 
 ```{r, results='asis', echo=FALSE}
-if (exists("recovery_txt4") && n_bcu_ctry > 0 && recovery_txt4 != "") {
-  cat(paste0("    -   ", recovery_txt4, "\n"))
+if (n_bcu_ctry > 0 && !is.null(recovery_txt4) && nzchar(recovery_txt4)) {
+    cat(paste0("    -   ", recovery_txt4, "\n"))
 }
 ```
 
-```{r bcu-recovery-plot, echo=FALSE, warning=FALSE, fig.width=9, fig.height=max(4, n_bcu_ctry * 0.35 + 1), out.width="100%"}
+```{r bcu-recovery-plot, echo=FALSE, warning=FALSE, fig.width=9, fig.height=max(4, n_bcu_ctry * 0.4 + 1), out.width="100%"}
 if (n_bcu_ctry > 0) {
 
   # Build plot df with recovery status labels
@@ -1536,6 +1568,30 @@ if (n_bcu_ctry > 0) {
 
   print(gg_bcu)
 }
+```
+
+```{r recovery-methodology, echo=FALSE, results='asis'}
+cat(paste0('
+\\begin{tcolorbox}[
+  colback=gray!8,
+  colframe=unicefblue,
+  arc=4pt,
+  boxrule=1pt,
+  title=\\textbf{\\color{white} Recovery Methodology},
+  colbacktitle=unicefblue
+]
+
+\\textbf{Categorization Logic:} This analysis tracks DTP3 coverage trends from 2019 to ', rev_yr, ' to assess post-pandemic recovery. 
+Countries are categorized based on their progress toward 2019 baseline levels:
+\\begin{itemize}
+    \\item \\textbf{Recovered:} 2024 coverage is equal to or higher than 2019 levels.
+    \\item \\textbf{Recovering:} Coverage is still below 2019 levels but has improved by at least 3 percentage points from its lowest point during the pandemic.
+    \\item \\textbf{Not Recovered:} Coverage remains below 2019 levels and has shown less than 3 percentage points of improvement from the pandemic low.
+\\end{itemize}
+
+\\end{tcolorbox}
+\\vspace{0.2in}
+'))
 ```
 
 <!-- ===================== APPENDIX ===================== -->
