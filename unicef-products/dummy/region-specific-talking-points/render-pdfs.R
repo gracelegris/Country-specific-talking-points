@@ -15,7 +15,7 @@ type <- "dummy"
 ## setup ----
 source(str_glue("unicef-products/{type}/utils/user_profiles.R"))
 source("unicef-products/main_vars.R")  # key vars
-source(str_glue("unicef-products/{type}/utils/R/label_vals.R"))  # labeling function
+source(str_glue("unicef-products/{type}/region-specific-talking-points/utils/label_vals.R"))  # labeling function
 
 # wuenic data
 wuenic_dta <- read_rds(str_glue("unicef-products/{type}/01_wuenic_dataset-prep/clean_wuenic_MASTER_{rev_yr}rev.rds")) %>%
@@ -78,7 +78,7 @@ for (reg in regions) {
     parent_reg <- "unicef"
   }
 
-  output_file <- str_glue("reports/{parent_reg}/_Test_Talking-points_{reg}.pdf")
+  output_file <- str_glue("reports/{parent_reg}/Talking-points_{reg}.pdf")
   
   rmarkdown::render(str_glue("unicef-products/{type}/region-specific-talking-points/wuenic_regional_talking_points_formatted.Rmd"),
                     output_file = output_file,

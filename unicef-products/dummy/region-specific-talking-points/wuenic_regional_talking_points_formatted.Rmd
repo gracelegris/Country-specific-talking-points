@@ -475,7 +475,7 @@ for (v in c('dtp1', 'dtp3', 'mcv1')) {
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       axis.text.y = ggtext::element_markdown(size = yaxis_txt),
-      axis.text.x = element_text(size = 9),
+      axis.text.x = element_text(size = 11, angle = 90, vjust = 0.5),
       strip.text.x = element_text(size = 12),
       legend.position = "bottom",
       legend.key.width = unit(1.2, "cm"),
@@ -1476,7 +1476,7 @@ if (n_bcu_ctry > 0) {
 
 ```{r, results='asis', echo=FALSE}
 if (n_bcu_ctry > 0) {
-  cat(paste0("-   In ", regn, " ", n_bcu_ctry, " out of the 35 countries are globally supported for the Big Catch-up. Of these:", "\n"))
+  cat(paste0("-   In ", regn, " ", n_bcu_ctry, " out of the 35 countries were globally supported for the Big Catch-up. Of these:", "\n"))
 }
 ```
 
@@ -1651,15 +1651,13 @@ These talking points present the latest WUENIC estimates (published 15 July `r r
 \vspace{0.5em}
 -   Haemophilus influenzae type B vaccine, third dose (Hib3)
 \vspace{0.5em}
--   Poliomyelitis vaccine, third dose (Polio3)
-\vspace{0.5em}
--   Inactivated polio vaccine, first dose (IPV1) and second dose (IPV2): second dose is only shown for oral polio vaccine (OPV) using countries
+-   Inactivated polio vaccine, first dose (IPV1) and last dose of the primary series (IPVC)
 \vspace{0.5em}
 -   Measles containing vaccine, first dose (MCV1) and second dose (MCV2)
 \vspace{0.5em}
 -   Rotavirus vaccine, last dose (RotaC)
 \vspace{0.5em}
--   Pneumococcal vaccine, third dose (PCV3)
+-   Pneumococcal vaccine, second or third dose according to the schedule (PCVC)
 \vspace{0.5em}
 -   Yellow Fever vaccine (YFV)
 \vspace{0.5em}

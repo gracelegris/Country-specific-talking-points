@@ -34,7 +34,7 @@ label_vals_millions <- function(df, col_to_label, new_col_name) {
           format(round(!!col_to_label_quo, -3), big.mark = ",") %>% as.character(),
         abs(!!col_to_label_quo) >= 1e6 ~ {
           val_million <- round(abs(!!col_to_label_quo) / 1e6, 1)
-          glue::glue("{val_million}m")
+          glue::glue("{val_million} million")
         },
         TRUE ~ NA_character_
       ) %>% 
